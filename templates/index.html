@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Õpetajate hinnangute süsteem</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+    <div class="wrapper">
+        <h1>Õpetajate hinnangud</h1>
+        <form method="POST" class="hinnangu-vorm">
+            <label for="aine">Aine:</label>
+            <input type="text" id="aine" name="aine" placeholder="Sisesta aine nimi" required />
+
+            <label for="nimi">Õpetaja nimi:</label>
+            <input type="text" id="nimi" name="nimi" placeholder="Sisesta õpetaja nimi" required />
+
+            <label for="hinne">Hinne (1-5):</label>
+            <input type="number" id="hinne" name="hinne" min="1" max="5" required />
+
+            <label for="kommentaar">Kommentaar (valikuline):</label>
+            <textarea id="kommentaar" name="kommentaar" placeholder="Lisa kommentaar..."></textarea>
+
+            <button type="submit">Lisa hinnang</button>
+        </form>
+
+
+
+        {% if hinnangud %}
+            <h2>Senised hinnangud</h2>
+            {% for h in hinnangud %}
+                <div class="hinnangukaart">
+                    <div class="hinnang-pealkiri">
+                        <strong>{{ h.nimi }}</strong> <em>{{ h.aine }}</em>
+                        <span class="hinne">Hinne: {{ h.hinne }}/5</span>
+                    </div>
+                    {% if h.kommentaar %}
+                        <p class="kommentaar">{{ h.kommentaar }}</p>
+                    {% endif %}
+                    <form method="POST" action="{{ url_for('kustuta_hinnang', hinnang_id=loop.index0) }}" onsubmit="return confirm('Kas oled kindel, et soovid selle hinnangu kustutada?');">
+                        <button type="submit" class="kustuta-nupp">Kustuta</button>
+                    </form>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>Praegu pole veel ühtegi hinnangut.</p>
+        {% endif %}
+    </div>
+</body>
+</html>
