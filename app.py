@@ -1,34 +1,29 @@
 from flask import Flask, render_template, request, redirect, url_for
-import json
+from flask_sqlalchemy import SQLAlchemy
 import os
 
 app = Flask(__name__)
-HINNANGU_FAIL = 'hinnangud.json'
 
-def loe_hinnangud():
-    if not os.path.exists(HINNANGU_FAIL):
-        with open(HINNANGU_FAIL, 'w', encoding='utf-8') as f:
-            f.write('[]')
-        return []
+# Database configuration
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///hinnangud.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    try:
-        with open(HINNANGU_FAIL, 'r', encoding='utf-8') as f:
-            sisu = f.read().strip()
-            if not sisu:
-                return []
-            return json.loads(sisu)
-    except json.JSONDecodeError:
-        with open(HINNANGU_FAIL, 'w', encoding='utf-8') as f:
-            f.write('[]')
-        return []
+db = SQLAlchemy(app)
 
-def salvesta_hinnangud(hinnangud):
-    with open(HINNANGU_FAIL, 'w', encoding='utf-8') as f:
-        json.dump(hinnangud, f, ensure_ascii=False, indent=2)
+# Define a model for Hinnang
+class Hinnang(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    aine = db.Column(db.String(100), nullable=False)
+    nimi = db.Column(db.String(100), nullable=False)
+    hinne = db.Column(db.Integer, nullable=False)
+    kommentaar = db.Column(db.Text, nullable=True)
+
+# Create the database and tables if they don't exist
+with app.app_context():
+    db.create_all()
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    hinnangud = loe_hinnangud()
     if request.method == 'POST':
         aine = request.form.get('aine')
         nimi = request.form.get('nimi')
@@ -36,24 +31,24 @@ def index():
         kommentaar = request.form.get('kommentaar')
 
         if aine and nimi and hinne:
-            uus_hinnang = {
-                'aine': aine,
-                'nimi': nimi,
-                'hinne': int(hinne),
-                'kommentaar': kommentaar or ''
-            }
-            hinnangud.append(uus_hinnang)
-            salvesta_hinnangud(hinnangud)
+            uus_hinnang = Hinnang(
+                aine=aine,
+                nimi=nimi,
+                hinne=int(hinne),
+                kommentaar=kommentaar or ''
+            )
+            db.session.add(uus_hinnang)
+            db.session.commit()
         return redirect(url_for('index'))
 
+    hinnangud = Hinnang.query.all()
     return render_template('index.html', hinnangud=hinnangud)
 
 @app.route('/kustuta/<int:hinnang_id>', methods=['POST'])
 def kustuta_hinnang(hinnang_id):
-    hinnangud = loe_hinnangud()
-    if 0 <= hinnang_id < len(hinnangud):
-        hinnangud.pop(hinnang_id)
-        salvesta_hinnangud(hinnangud)
+    hinnang = Hinnang.query.get_or_404(hinnang_id)
+    db.session.delete(hinnang)
+    db.session.commit()
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
